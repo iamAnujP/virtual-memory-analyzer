@@ -3,6 +3,7 @@ let pageTableSize = 16;
 let frameCount = 4;
 let pageFaults = 0;
 let totalAccesses = 0;
+let currentAlgorithm = "FIFO";
 
 document.addEventListener("DOMContentLoaded", () => {
     const accessBtn = document.getElementById("access-btn");
@@ -10,24 +11,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const stepBtn = document.getElementById("step-btn");
     const resetBtn = document.getElementById("reset-btn");
     const darkModeToggle = document.getElementById("dark-mode-toggle");
+    const algoSelect = document.getElementById("algo-select");
 
     pageTableSize = parseInt(document.getElementById("page-table-size").value);
     frameCount = parseInt(document.getElementById("frame-count").value);
 
     initPageTable();
 
-    accessBtn.onclick = () => {
+    // Change algorithm when user selects new one
+    algoSelect.onchange = async () => {
+        currentAlgorithm = algoSelect.value;
+        await setAlgorithm(currentAlgorithm);
+    };
+
+    accessBtn.onclick = async () => {
         const page = parseInt(document.getElementById("page-input").value);
         if (!isNaN(page)) {
-            accessPage(page);
+            await accessPage(page);
         }
     };
 
-    runBtn.onclick = () => {
-        const seq = document.getElementById("access-sequence").value.split(",").map(s => parseInt(s.trim()));
-        seq.forEach((page, index) => {
-            setTimeout(() => accessPage(page), index * 500);
-        });
+    runBtn.onclick = async () => {
+        const seqInput = document.getElementById("access-sequence").value;
+        const sequence = seqInput.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        for (let i = 0; i < sequence.length; i++) {
+            await new Promise(r => setTimeout(r, 500));
+            await accessPage(sequence[i]);
+        }
     };
 
     resetBtn.onclick = resetSimulation;
@@ -48,23 +58,56 @@ function initPageTable() {
     }
 }
 
-function accessPage(page) {
+async function accessPage(page) {
     totalAccesses++;
-    const isFault = !frames.includes(page);
-    if (isFault) {
-        pageFaults++;
-        if (frames.length >= frameCount) {
-            frames.shift(); // FIFO by default
-        }
-        frames.push(page);
+
+    try {
+        const response = await fetch("/access", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ page })
+        });
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error);
+
+        frames = data.frames;
+        const isFault = data.last_fault;
+
+        if (isFault) pageFaults++;
+
+        updateFramesUI();
+        updateStats();
+        logAccess(page, isFault);
+
+        document.getElementById("last-page").textContent = page;
+        highlightPage(page, isFault);
+
+    } catch (err) {
+        console.error("Access error:", err);
+        alert("Error accessing page: " + err.message);
     }
+}
 
-    updateFramesUI();
-    updateStats();
-    logAccess(page, isFault);
+async function setAlgorithm(algorithm) {
+    try {
+        const response = await fetch("/set_algorithm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ algorithm })
+        });
 
-    document.getElementById("last-page").textContent = page;
-    highlightPage(page, isFault);
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error);
+
+        console.log(`✅ Switched to ${data.algorithm} algorithm`);
+        resetSimulation();
+
+    } catch (err) {
+        console.error("Set algorithm error:", err);
+        alert("Error changing algorithm: " + err.message);
+    }
 }
 
 function updateFramesUI() {
@@ -95,7 +138,7 @@ function highlightPage(page, isFault) {
 function logAccess(page, isFault) {
     const log = document.getElementById("log-entries");
     const li = document.createElement("li");
-    li.textContent = `Page ${page} ${isFault ? "-> Page Fault" : "-> Hit"}`;
+    li.textContent = `Page ${page} ${isFault ? "-> Page Fault" : "-> Hit"} (${currentAlgorithm})`;
     log.appendChild(li);
 }
 
@@ -109,3 +152,4 @@ function resetSimulation() {
     document.getElementById("last-page").textContent = "-";
     initPageTable();
 }
+
