@@ -3,19 +3,14 @@ from memory_manager import MemoryManager
 from process import Process
 from config import PAGE_TABLE_SIZE
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Create global memory manager and process objects
-memory_manager = MemoryManager(algorithm_name="FIFO")  # Default to FIFO
+memory_manager = MemoryManager(algorithm_name="FIFO")  
 process = Process(memory_manager)
 
 
 @app.route("/")
 def index():
-    """
-    Render the main page with page table and algorithm info.
-    """
     return render_template(
         "index.html",
         page_table_size=PAGE_TABLE_SIZE,
@@ -25,11 +20,6 @@ def index():
 
 @app.route("/access", methods=["POST"])
 def access_page():
-    """
-    Simulate accessing a single page.
-    Expect JSON payload: { "page": <page_number> }
-    Returns the current memory state with metrics.
-    """
     data = request.get_json()
     page = data.get("page")
 
@@ -46,10 +36,6 @@ def access_page():
 
 @app.route("/set_algorithm", methods=["POST"])
 def set_algorithm():
-    """
-    Change the page replacement algorithm at runtime.
-    Expect JSON: { "algorithm": "FIFO|LRU|MRU|OPTIMAL", "reference_string": optional list }
-    """
     data = request.get_json()
     algorithm = data.get("algorithm", "").upper()
     reference_string = data.get("reference_string")
@@ -68,11 +54,6 @@ def set_algorithm():
 
 @app.route("/simulate", methods=["POST"])
 def simulate_sequence():
-    """
-    Run a full sequence of page accesses.
-    Expect JSON: { "sequence": [page_numbers] }
-    Returns total page faults and final memory state.
-    """
     data = request.get_json()
     sequence = data.get("sequence")
 
@@ -89,5 +70,4 @@ def simulate_sequence():
 
 
 if __name__ == "__main__":
-    # Start Flask server in debug mode
     app.run(debug=True)
