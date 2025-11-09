@@ -1,15 +1,36 @@
-# main.py
-
 from memory_manager import MemoryManager
 from process import Process
 
 def main():
-    mm = MemoryManager()
-    proc = Process(mm)
+    print("=== 🧠 Virtual Memory Simulator ===\n")
 
-    print("=== Virtual Memory Analyser ===")
+    # Ask the user to pick a page replacement algorithm
+    algorithm = input("Choose page replacement algorithm (FIFO / LRU / MRU / OPTIMAL): ").strip().upper()
+    if algorithm not in ["FIFO", "LRU", "MRU", "OPTIMAL"]:
+        print("⚠️ Invalid choice, defaulting to FIFO.")
+        algorithm = "FIFO"
+
+    # Sample page access sequence
     access_sequence = [0, 2, 1, 4, 0, 3, 6, 2, 4]
-    proc.access_pages(access_sequence)
+
+    # For Optimal, we need the full reference string
+    reference_string = access_sequence if algorithm == "OPTIMAL" else None
+
+    # Set up memory manager and a process to simulate accesses
+    memory_manager = MemoryManager(algorithm_name=algorithm, reference_string=reference_string)
+    process = Process(memory_manager)
+
+    print(f"\nAlgorithm in use: {algorithm}")
+    print(f"Page access sequence: {access_sequence}\n")
+
+    # Run simulation
+    total_faults = process.simulate(access_sequence)
+
+    # Show final results
+    print("\n=== Simulation Complete ===")
+    print(f"Total page faults: {total_faults}")
+    print(f"Frames after simulation: {memory_manager.replacement.get_frames()}")
+    print(f"Page table state: {memory_manager.page_table.get_entries()}")
 
 if __name__ == "__main__":
     main()
