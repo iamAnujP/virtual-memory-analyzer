@@ -23,8 +23,7 @@ def access_page():
 
     if page is None:
         return jsonify({"error": "Missing 'page' value"}), 400
-
-    # Access the page and get state information
+    
     state = memory_manager.access_page(page)
 
     return jsonify({
@@ -32,6 +31,7 @@ def access_page():
         "last_accessed": page
     })
 
+# this part does set the algo by default its fifo
 @app.route("/set_algorithm", methods=["POST"])
 def set_algorithm():
     data = request.get_json()
@@ -48,7 +48,7 @@ def set_algorithm():
         })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-
+# this is to start simlution proceess
 @app.route("/simulate", methods=["POST"])
 def simulate_sequence():
     data = request.get_json()
@@ -68,10 +68,9 @@ def simulate_sequence():
 @app.route("/reset", methods=["POST"])
 def reset_simulation():
     try:
-        # Reset the memory manager and process state
         global memory_manager, process
-        memory_manager = MemoryManager(algorithm_name="FIFO")  # Reset to default FIFO
-        process = Process(memory_manager)  # Reinitialize process with fresh memory manager
+        memory_manager = MemoryManager(algorithm_name="FIFO")  
+        process = Process(memory_manager)  
 
         return jsonify({
             "status": "ok",
@@ -84,4 +83,3 @@ def reset_simulation():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
