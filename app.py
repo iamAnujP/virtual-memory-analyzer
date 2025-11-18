@@ -8,7 +8,6 @@ app = Flask(__name__)
 memory_manager = MemoryManager(algorithm_name="FIFO")  
 process = Process(memory_manager)
 
-
 @app.route("/")
 def index():
     return render_template(
@@ -16,7 +15,6 @@ def index():
         page_table_size=PAGE_TABLE_SIZE,
         current_algorithm=memory_manager.algorithm_name
     )
-
 
 @app.route("/access", methods=["POST"])
 def access_page():
@@ -26,13 +24,13 @@ def access_page():
     if page is None:
         return jsonify({"error": "Missing 'page' value"}), 400
 
+    # Access the page and get state information
     state = memory_manager.access_page(page)
 
     return jsonify({
         **state,
         "last_accessed": page
     })
-
 
 @app.route("/set_algorithm", methods=["POST"])
 def set_algorithm():
@@ -51,7 +49,6 @@ def set_algorithm():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-
 @app.route("/simulate", methods=["POST"])
 def simulate_sequence():
     data = request.get_json()
@@ -68,6 +65,23 @@ def simulate_sequence():
         "sequence": sequence
     })
 
+@app.route("/reset", methods=["POST"])
+def reset_simulation():
+    try:
+        # Reset the memory manager and process state
+        global memory_manager, process
+        memory_manager = MemoryManager(algorithm_name="FIFO")  # Reset to default FIFO
+        process = Process(memory_manager)  # Reinitialize process with fresh memory manager
+
+        return jsonify({
+            "status": "ok",
+            "message": "Simulation reset successfully.",
+            "algorithm": memory_manager.algorithm_name,
+            "metrics": memory_manager.get_state()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
+
